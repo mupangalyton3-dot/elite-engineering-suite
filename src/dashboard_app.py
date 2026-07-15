@@ -1,79 +1,146 @@
 import streamlit as st
 import numpy as np
-from scipy.integrate import odeint
 import matplotlib.pyplot as plt
+from scipy.integrate import odeint
 
-st.title("🌱 AI-Optimized Algae Carbon Capture System")
+# -----------------------------
+# 🎨 PAGE CONFIG (Silicon UI)
+# -----------------------------
+st.set_page_config(
+    page_title="Elite Engineering AI Suite",
+    page_icon="🚀",
+    layout="wide"
+)
 
-# ==============================
-# USER INPUTS
-# ==============================
+# -----------------------------
+# 💎 CUSTOM STYLING
+# -----------------------------
+st.markdown("""
+<style>
+body {
+    background-color: #0e1117;
+    color: white;
+}
+.main {
+    background: linear-gradient(135deg, #0e1117, #111827);
+}
+h1, h2, h3 {
+    color: #00f5d4;
+}
+.stButton>button {
+    background: linear-gradient(90deg, #00f5d4, #00bbf9);
+    color: black;
+    border-radius: 10px;
+    font-weight: bold;
+}
+</style>
+""", unsafe_allow_html=True)
 
-I0 = st.slider("Light Intensity", 50, 400, 200)
-kLa = st.slider("Mass Transfer (kLa)", 0.1, 1.0, 0.5)
-H = st.slider("Reactor Depth (m)", 0.1, 1.0, 0.5)
+# -----------------------------
+# 🧠 HEADER
+# -----------------------------
+st.title("🚀 Elite Engineering AI Dashboard")
+st.markdown("### AI-Optimized Bio-System Simulation + Cost + Carbon Intelligence")
 
-# Constants
-mu_max = 0.09
-Ks = 0.03
-Ki = 50
-Yx_co2 = 1.8
-k_light = 0.15
+# -----------------------------
+# ⚙️ SIDEBAR INPUTS
+# -----------------------------
+st.sidebar.header("⚙️ System Controls")
 
-X0, C0 = 0.1, 0.02
-y0 = [X0, C0]
-t = np.linspace(0, 100, 300)
+growth_rate = st.sidebar.slider("Growth Rate", 0.1, 2.0, 1.0)
+carrying_capacity = st.sidebar.slider("Carrying Capacity", 10, 100, 50)
+initial_population = st.sidebar.slider("Initial Population", 1, 10, 2)
 
-# ==============================
-# MODEL
-# ==============================
+cost_per_unit = st.sidebar.slider("Cost per Unit ($)", 1, 20, 5)
+carbon_per_unit = st.sidebar.slider("Carbon Emission per Unit (kg)", 0.1, 5.0, 1.0)
 
-def avg_light(X):
-    if X < 1e-6:
-        return I0
-    return (I0 / (k_light * X * H)) * (1 - np.exp(-k_light * X * H))
+# -----------------------------
+# 📊 MODEL (Logistic Growth)
+# -----------------------------
+def model(P, t, r, K):
+    return r * P * (1 - P / K)
 
-def model(y, t):
-    X, C = y
-    I_avg = avg_light(X)
+t = np.linspace(0, 10, 100)
+solution = odeint(model, initial_population, t, args=(growth_rate, carrying_capacity))
 
-    mu = mu_max * (C / (Ks + C)) * (I_avg / (Ki + I_avg))
-    dXdt = mu * X
+population = solution.flatten()
 
-    CO2_consumption = (1 / Yx_co2) * dXdt
-    CO2_transfer = kLa * (0.04 - C)
+# -----------------------------
+# 💰 COST + 🌱 CARBON
+# -----------------------------
+cost = population * cost_per_unit
+carbon = population * carbon_per_unit
 
-    dCdt = CO2_transfer - CO2_consumption
+# -----------------------------
+# 🤖 AI OPTIMIZATION ENGINE
+# -----------------------------
+def optimize():
+    best_score = -1e9
+    best_r = 0
 
-    return [dXdt, dCdt]
+    for r in np.linspace(0.1, 2.0, 50):
+        sol = odeint(model, initial_population, t, args=(r, carrying_capacity))
+        pop = sol[-1][0]
 
-sol = odeint(model, y0, t)
-X = sol[:, 0]
-C = sol[:, 1]
+        revenue = pop * 10
+        cost_val = pop * cost_per_unit
+        carbon_penalty = pop * carbon_per_unit * 2
 
-# ==============================
-# METRICS
-# ==============================
+        score = revenue - cost_val - carbon_penalty
 
-CO2_captured = (C0 - C[-1]) * 1000  # scaled
-profit = CO2_captured * 0.05 - (I0 * 0.01)
+        if score > best_score:
+            best_score = score
+            best_r = r
 
-# ==============================
-# OUTPUT
-# ==============================
+    return best_r, best_score
 
-st.subheader("📊 Results")
+opt_r, opt_score = optimize()
 
-st.write(f"Final Biomass: {X[-1]:.2f} g/L")
-st.write(f"CO₂ Captured: {CO2_captured:.2f}")
-st.write(f"Estimated Profit: ${profit:.2f}")
+# -----------------------------
+# 📈 LAYOUT (Silicon style)
+# -----------------------------
+col1, col2 = st.columns(2)
 
-# Plot
-fig, ax = plt.subplots()
-ax.plot(t, X, label="Biomass")
-ax.plot(t, C, label="CO₂")
-ax.legend()
-ax.set_xlabel("Time")
-ax.set_ylabel("Concentration")
+# 📊 Population Graph
+with col1:
+    st.subheader("📊 Growth Simulation")
+    fig, ax = plt.subplots()
+    ax.plot(t, population)
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Population")
+    st.pyplot(fig)
 
-st.pyplot(fig)
+# 💰 Cost + Carbon
+with col2:
+    st.subheader("💰 Cost & 🌱 Carbon")
+    fig2, ax2 = plt.subplots()
+    ax2.plot(t, cost, label="Cost")
+    ax2.plot(t, carbon, label="Carbon")
+    ax2.legend()
+    st.pyplot(fig2)
+
+# -----------------------------
+# 🤖 AI RESULTS PANEL
+# -----------------------------
+st.markdown("---")
+st.subheader("🤖 AI Optimization Engine")
+
+st.success(f"✅ Optimal Growth Rate: {opt_r:.2f}")
+st.info(f"💡 AI Score (Profit - Cost - Carbon): {opt_score:.2f}")
+
+# -----------------------------
+# 🎯 KPI CARDS
+# -----------------------------
+st.markdown("### 📊 Key Metrics")
+
+col3, col4, col5 = st.columns(3)
+
+col3.metric("Final Population", f"{population[-1]:.2f}")
+col4.metric("Total Cost", f"${cost[-1]:.2f}")
+col5.metric("Carbon Impact", f"{carbon[-1]:.2f} kg")
+
+# -----------------------------
+# 🚀 FOOTER
+# -----------------------------
+st.markdown("---")
+st.markdown("Built with ❤️ by Elite Engineering Suite | AI Powered")
